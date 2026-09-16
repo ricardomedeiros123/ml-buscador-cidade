@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🛒 ML Buscador por Cidade</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #FFF159;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 12px 48px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    header h1 {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: #1A1A1A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    header p {
+      color: #555;
+      margin-top: 6px;
+      font-size: .95rem;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 32px rgba(0,0,0,.10);
+      padding: 28px 32px 32px;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    /* ── Seções ── */
+    .section-label {
+      font-size: .80rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #3483FA;
+      margin-bottom: 6px;
+      margin-top: 20px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    /* ── Inputs ── */
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #DDD;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: #222;
+      background: #FAFAFA;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, select:focus {
+      border-color: #3483FA;
+      box-shadow: 0 0 0 3px rgba(52,131,250,.15);
+      background: #fff;
+    }
+
+    /* ── Cidade row ── */
+    .cidade-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .cidade-row input { flex: 1; }
+    .btn-import {
+      white-space: nowrap;
+      padding: 0 16px;
+      border: 1.5px solid #3483FA;
+      border-radius: 8px;
+      background: #fff;
+      color: #3483FA;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .btn-import:hover { background: #3483FA; color: #fff; }
+
+    /* ── Datalist suggestions ── */
+    #sugestoes-cidade { display: none; }
+
+    /* ── Radio/Checkbox group ── */
+    .radio-group, .check-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 20px;
+      margin-top: 4px;
+    }
+    .radio-group label, .check-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .95rem;
+      cursor: pointer;
+      color: #333;
+    }
+    input[type="radio"], input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: #3483FA;
+      cursor: pointer;
+    }
+
+    /* ── Faixa de preço ── */
+    .price-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    @media (max-width: 520px) {
+      .price-row { grid-template-columns: 1fr 1fr; }
+      .price-row .avaliacao { grid-column: span 2; }
+    }
+    .price-row label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    /* ── Filtros extra ── */
+    .filtros-extra {
+      background: #F7F9FF;
+      border: 1px solid #E0EAFF;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-top: 4px;
+    }
+
+    /* ── Botões principais ── */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .btn-buscar {
+      flex: 1;
+      padding: 14px 20px;
+      background: #3483FA;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-buscar:hover { background: #2968C8; }
+    .btn-buscar:active { transform: scale(.98); }
+
+    .btn-copy {
+      padding: 14px 18px;
+      background: #EEE;
+      color: #333;
+      border: none;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-copy:hover { background: #DDD; }
+
+    /* ── URL preview ── */
+    .url-preview {
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: #F0F7FF;
+      border: 1px solid #C8DFFF;
+      border-radius: 8px;
+      font-size: .78rem;
+      font-family: "Consolas", monospace;
+      color: #2255AA;
+      word-break: break-all;
+      display: none;
+    }
+    .url-preview.visible { display: block; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #222;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: .92rem;
+      opacity: 0;
+      transition: transform .3s, opacity .3s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ── Modal importar cidade ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px 28px 24px;
+      width: 100%; max-width: 560px;
+      box-shadow: 0 8px 48px rgba(0,0,0,.18);
+      transform: scale(.95);
+      transition: transform .2s;
+    }
+    .modal-overlay.open .modal { transform: scale(1); }
+    .modal h2 { font-size: 1.1rem; margin-bottom: 6px; }
+    .modal p { font-size: .87rem; color: #555; margin-bottom: 14px; line-height: 1.5; }
+    .modal textarea {
+      width: 100%;
+      height: 90px;
+      padding: 10px;
+      border: 1.5px solid #CCC;
+      border-radius: 8px;
+      font-size: .85rem;
+      font-family: monospace;
+      resize: vertical;
+      outline: none;
+    }
+    .modal textarea:focus { border-color: #3483FA; }
+    .modal-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+    .modal-fields label { font-size: .82rem; font-weight: 600; color: #555; display: block; margin-bottom: 3px; }
+    .modal-err { color: #D00; font-size: .83rem; margin-top: 8px; min-height: 18px; }
+    .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+    .modal-btns button { flex: 1; padding: 11px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: .95rem; }
+    .modal-ok { background: #3483FA; color: #fff; }
+    .modal-ok:hover { background: #2968C8; }
+    .modal-cancel { background: #EEE; color: #333; }
+    .modal-cancel:hover { background: #DDD; }
+
+    footer {
+      margin-top: 32px;
+      font-size: .8rem;
+      color: #888;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🛒 ML Buscador por Cidade</h1>
+  <p>Encontre vendedores e produtos em cidades específicas do Mercado Livre</p>
+</header>
+
+<div class="card">
+
+  <!-- PRODUTO -->
+  <div class="section-label">🔍 Produto</div>
+  <input type="text" id="produto" placeholder="Ex.: chocolate, sabão em pó, tênis..." autocomplete="off" />
+
+  <!-- CIDADE -->
+  <div class="section-label">📍 Cidade</div>
+  <div class="cidade-row">
+    <input type="text" id="cidade" list="sugestoes-cidade" placeholder="Digite para filtrar..." autocomplete="off" />
+    <datalist id="sugestoes-cidade"></datalist>
+    <button class="btn-import" onclick="abrirModal()">+ Importar URL</button>
+  </div>
+
+  <!-- CONDIÇÃO -->
+  <div class="section-label">📦 Condição</div>
+  <div class="radio-group">
+    <label><input type="radio" name="cond" value="" checked /> Qualquer</label>
+    <label><input type="radio" name="cond" value="novo" /> Novo</label>
+    <label><input type="radio" name="cond" value="usado" /> Usado</label>
+  </div>
+
+  <!-- ORDENAÇÃO -->
+  <div class="section-label">📊 Ordenar por</div>
+  <select id="ordem">
+    <option value="">Mais relevantes</option>
+    <option value="price_asc">Menor preço</option>
+    <option value="price_desc">Maior preço</option>
+    <option value="sales_asc">Mais vendidos</option>
+    <option value="date_asc">Recém adicionados</option>
+    <option value="rating_desc">Melhor avaliados</option>
+  </select>
+
+  <!-- FILTROS ADICIONAIS -->
+  <div class="section-label">⚙️ Filtros adicionais</div>
+  <div class="filtros-extra">
+
+    <div class="price-row">
+      <div>
+        <label for="pmin">Preço mínimo (R$)</label>
+        <input type="number" id="pmin" min="0" step="0.01" placeholder="0,00" />
+      </div>
+      <div>
+        <label for="pmax">Preço máximo (R$)</label>
+        <input type="number" id="pmax" min="0" step="0.01" placeholder="sem limite" />
+      </div>
+      <div class="avaliacao">
+        <label for="aval">Avaliação mínima</label>
+        <select id="aval">
+          <option value="">Qualquer</option>
+          <option value="5">⭐⭐⭐⭐⭐ 5 estrelas</option>
+          <option value="4">⭐⭐⭐⭐ 4+ estrelas</option>
+          <option value="3">⭐⭐⭐ 3+ estrelas</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="check-group" style="margin-top:14px;">
+      <label><input type="checkbox" id="frete" /> 🚚 Frete grátis</label>
+      <label><input type="checkbox" id="full" /> ⚡ Mercado Envios Full</label>
+      <label><input type="checkbox" id="loja" /> 🏪 Loja oficial</label>
+    </div>
+
+  </div>
+
+  <!-- BOTÕES -->
+  <div class="btn-row">
+    <button class="btn-buscar" onclick="buscar()">🚀 BUSCAR NO MERCADO LIVRE</button>
+    <button class="btn-copy" onclick="copiarLink()" title="Copiar link">📋 Copiar</button>
+  </div>
+
+  <div class="url-preview" id="urlPreview"></div>
+</div>
+
+<footer>Ferramenta não afiliada ao Mercado Livre • Uso pessoal</footer>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL IMPORTAR CIDADE -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>📥 Importar cidade de URL do ML</h2>
+    <p>
+      Cole abaixo uma URL do Mercado Livre que já tenha o filtro de cidade aplicado.<br>
+      <strong>Como obter:</strong> faça qualquer busca no ML → clique em "Retirada grátis: Cidade" → selecione a cidade → copie a URL completa.
+    </p>
+    <textarea id="modalUrl" placeholder="https://lista.mercadolivre.com.br/...#applied_filter_id%3Dpickup_city..."></textarea>
+    <div class="modal-fields">
+      <div>
+        <label for="modalNome">Nome de exibição</label>
+        <input type="text" id="modalNome" placeholder="Ex.: São Paulo (SP)" />
+      </div>
+      <div>
+        <label for="modalEstado">Nome do Estado</label>
+        <input type="text" id="modalEstado" placeholder="Ex.: São Paulo" />
+      </div>
+    </div>
+    <div class="modal-err" id="modalErr"></div>
+    <div class="modal-btns">
+      <button class="modal-ok" onclick="importarCidade()">✅ Importar</button>
+      <button class="modal-cancel" onclick="fecharModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// BASE DE CIDADES — city_id e state_id são os IDs internos do ML (não base64)
+// ─────────────────────────────────────────────────────────────────────────────
+const CIDADES = {
+  "Uberlândia (MG)":    { city_id: "MLBCUBEa8a56",  state_id: "MLBPMINS1502d", city_name: "Uberlândia",    state_name: "Minas Gerais" },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────────────────────────────────────
+function encodeMLId(rawId) {
+  // base64 sem padding
+  return btoa(rawId).replace(/=+$/, "");
+}
+
+function decodeMLId(b64) {
+  // adiciona padding se necessário
+  const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+  return atob(b64 + pad);
+}
+
+function extrairIdsDaUrl(url) {
+  // Extrai city_id e state_id de URL do ML com filtro de cidade aplicado
+  const pathMatch = url.match(/pickup\*city_([A-Za-z0-9+/]+=*)_pickup\*state_([A-Za-z0-9+/]+=*)/);
+  const fragCityId = url.match(/applied_value_id(?:%3D|=)([A-Za-z0-9+/]+=*)/);
+  const fragState  = url.match(/pickup\*state_([A-Za-z0-9+/]+=*)/);
+  const fragName   = url.match(/applied_value_name(?:%3D|=)((?:(?!%26|&).)+)/);
+
+  if (!pathMatch && !fragCityId) return null;
+
+  const cityB64  = pathMatch ? pathMatch[1] : fragCityId[1];
+  const stateB64 = pathMatch ? pathMatch[2] : (fragState ? fragState[1] : "");
+
+  const city_name_raw = fragName ? decodeURIComponent(fragName[1].replace(/\+/g, " ")) : "";
+
+  return {
+    city_id:   decodeMLId(cityB64),
+    state_id:  stateB64 ? decodeMLId(stateB64) : "",
+    city_name: city_name_raw,
+  };
+}
+
+function buildUrl(produto, cidadeKey, condicao, ordenacao, pmin, pmax, frete, full, aval) {
+  const d = CIDADES[cidadeKey];
+  if (!d) return null;
+
+  const cityB64  = encodeMLId(d.city_id);
+  const stateB64 = d.state_id ? encodeMLId(d.state_id) : "";
+
+  const slug = encodeURIComponent(produto.trim().toLowerCase().replace(/\s+/g, "-"))
+               .replace(/%2D/g, "-");
+
+  const condPart  = condicao  ? `/${condicao}` : "";
+  const statePart = stateB64 ? `_pickup*state_${stateB64}` : "";
+
+  let url = `https://lista.mercadolivre.com.br/${slug}_NoIndex_True_SHIPPING*ORIGIN_10215068_pickup*city_${cityB64}${statePart}${condPart}`;
+
+  const params = new URLSearchParams();
+  if (ordenacao) params.set("sort", ordenacao);
+  if (pmin && pmax) params.set("price", `${pmin}-${pmax}`);
+  else if (pmin)    params.set("price", `${pmin}-*`);
+  else if (pmax)    params.set("price", `*-${pmax}`);
+  if (frete) params.set("shipping", "free");
+  if (aval)  params.set("min_rating", aval);
+
+  const qs = params.toString();
+  if (qs) url += "?" + qs;
+
+  const cityNameEnc = encodeURIComponent(d.city_name || cidadeKey.split(" (")[0]);
+  const fragment =
+    `applied_filter_id%3Dpickup_city` +
+    `%26applied_filter_name%3DRetirada+gr%C3%A1tis%3A+Cidade` +
+    `%26applied_filter_order%3D6` +
+    `%26applied_value_id%3D${cityB64}` +
+    `%26applied_value_name%3D${cityNameEnc}` +
+    `%26applied_value_order%3D4` +
+    `%26applied_value_results%3D1` +
+    `%26is_custom%3Dfalse`;
+
+  return url + "#" + fragment;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERFACE
+// ─────────────────────────────────────────────────────────────────────────────
+function popularDatalist() {
+  const dl = document.getElementById("sugestoes-cidade");
+  dl.innerHTML = Object.keys(CIDADES).sort()
+    .map(c => `<option value="${c}"></option>`).join("");
+}
+
+function getValues() {
+  return {
+    produto:  document.getElementById("produto").value.trim(),
+    cidade:   document.getElementById("cidade").value.trim(),
+    condicao: document.querySelector('input[name="cond"]:checked').value,
+    ordenacao: document.getElementById("ordem").value,
+    pmin:     document.getElementById("pmin").value,
+    pmax:     document.getElementById("pmax").value,
+    frete:    document.getElementById("frete").checked,
+    full:     document.getElementById("full").checked,
+    aval:     document.getElementById("aval").value,
+  };
+}
+
+function resolverCidade(cidadeInput) {
+  if (CIDADES[cidadeInput]) return cidadeInput;
+  const lower = cidadeInput.toLowerCase();
+  const match = Object.keys(CIDADES).find(c => c.toLowerCase().includes(lower));
+  return match || null;
+}
+
+function getUrl() {
+  const v = getValues();
+  if (!v.produto) { toast("⚠️ Digite o nome do produto"); return null; }
+
+  const cidade = resolverCidade(v.cidade);
+  if (!cidade) {
+    toast("⚠️ Cidade não encontrada. Use '+ Importar URL' para adicionar.");
+    return null;
+  }
+
+  document.getElementById("cidade").value = cidade;
+  return buildUrl(v.produto, cidade, v.condicao, v.ordenacao, v.pmin, v.pmax, v.frete, v.full, v.aval);
+}
+
+function buscar() {
+  const url = getUrl();
+  if (!url) return;
+
+  const preview = document.getElementById("urlPreview");
+  preview.textContent = url;
+  preview.classList.add("visible");
+
+  window.open(url, "_blank");
+}
+
+function copiarLink() {
+  const url = getUrl();
+  if (!url) return;
+
+  navigator.clipboard.writeText(url).then(() => {
+    toast("📋 Link copiado!");
+    const preview = document.getElementById("urlPreview");
+    preview.textContent = url;
+    preview.classList.add("visible");
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement("textarea");
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    toast("📋 Link copiado!");
+  });
+}
+
+function toast(msg, duration = 2800) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), duration);
+}
+
+// Enter para buscar
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !document.getElementById("modalOverlay").classList.contains("open")) {
+    buscar();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL IMPORTAR CIDADE
+// ─────────────────────────────────────────────────────────────────────────────
+function abrirModal() {
+  document.getElementById("modalOverlay").classList.add("open");
+  document.getElementById("modalErr").textContent = "";
+  document.getElementById("modalUrl").value = "";
+  document.getElementById("modalNome").value = "";
+  document.getElementById("modalEstado").value = "";
+  setTimeout(() => document.getElementById("modalUrl").focus(), 100);
+}
+
+function fecharModal() {
+  document.getElementById("modalOverlay").classList.remove("open");
+}
+
+document.getElementById("modalOverlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) fecharModal();
+});
+
+function importarCidade() {
+  const url   = document.getElementById("modalUrl").value.trim();
+  const nome  = document.getElementById("modalNome").value.trim();
+  const estado = document.getElementById("modalEstado").value.trim();
+  const err   = document.getElementById("modalErr");
+
+  if (!url || !nome) { err.textContent = "❗ Preencha a URL e o nome de exibição."; return; }
+
+  const result = extrairIdsDaUrl(url);
+  if (!result) {
+    err.textContent = "❗ Não foi possível extrair IDs. Certifique-se que a URL tem o filtro de cidade aplicado (deve conter pickup*city_ e #applied_filter...).";
+    return;
+  }
+
+  CIDADES[nome] = {
+    city_id:    result.city_id,
+    state_id:   result.state_id,
+    city_name:  result.city_name || nome.split(" (")[0],
+    state_name: estado,
+  };
+
+  popularDatalist();
+  document.getElementById("cidade").value = nome;
+  fecharModal();
+  toast(`✅ "${nome}" adicionada com sucesso!`, 3000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+popularDatalist();
+document.getElementById("cidade").value = "Uberlândia (MG)";
+</script>
+</body>
+</html>
